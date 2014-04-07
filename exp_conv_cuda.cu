@@ -622,7 +622,7 @@ __global__ void coarseSweep_R(float * IR_d, float * JR_d, const int N, const int
 		{
 			recursion_coeff = ex_end;
 			subdom_offset = k_end;
-			cell_index = N-1;
+			cell_index = N-1-subdom_offset;
 		}
 
             
