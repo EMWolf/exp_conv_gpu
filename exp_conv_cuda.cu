@@ -622,7 +622,7 @@ __global__ void coarseSweep_R(float * IR_d, float * JR_d, const int N, const int
 		{
 			recursion_coeff = ex_end;
 			subdom_offset = k_end;
-			cell_index = N-1-subdom_offset;
+			cell_index = N-subdom_offset;
 		}
 
             
@@ -631,12 +631,12 @@ __global__ void coarseSweep_R(float * IR_d, float * JR_d, const int N, const int
 		{
             recursion_coeff = ex_subdom;
 			subdom_offset = M;
-			cell_index = N-1-k_end-(tid-1)*M-subdom_offset;
+			cell_index = N-k_end-(tid-1)*M-subdom_offset;
 		}	
 		else{
 			recursion_coeff = ex_subdom;
 			subdom_offset = M;
-			cell_index = N-1-(tid*M)-subdom_offset;
+			cell_index = N-(tid*M)-subdom_offset;
 		}
 		}
 
@@ -997,14 +997,17 @@ int main(void){
 		x = (float)j*dx;
 		err_temp = abs(I[j]-(2.0-exp(-alpha*x)-exp(-alpha*(L-x))));
 		
+		if (err_temp>0)
+			printf("New max err of %f at gridpoint j = %i \n", err_temp,j);
+		
 		if (err_temp>err){
 			err = err_temp;
-			printf("New max err of %f at gridpoint j = %i \n", err_temp,j);
 		};
 		
 	}
 	
-	printf("Maximum error: %d \n", err);
+	printf("Maximum error: %f \n", err);
+	
 	testTime = clock();
 	diff = testTime-cleanupTime;
 	sec = diff/ CLOCKS_PER_SEC;
