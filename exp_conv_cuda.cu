@@ -486,12 +486,12 @@ __global__ void localWeightAndSweep_R(float * JR_d, float * val_d, const int N, 
 		/* We have that JR[0] is NOT zero, so we need special treatment of the left endpoint for JR. */
 		if(tid==0)
 		{
-			endLoopIndex = loop_over_y_cells-1;
+			endLoopIndex = loop_over_y_cells;
 			JR_d[0] = P*val_d[0]+Q*val_d[1]+R*(val_d[1]-2.0*val_d[0]+val_d[N-2]); /* For periodic integral */
 		}
 		else
 		
-			endLoopIndex = loop_over_y_cells;
+			endLoopIndex = loop_over_y_cells+1;
 
 		
         
@@ -516,7 +516,7 @@ __global__ void localWeightAndSweep_R(float * JR_d, float * val_d, const int N, 
 
         {
 
-            cell_index=(tid+1)*M-j;        /* Compute cell offset for cell j of */
+            cell_index=tid*M+loop_over_y_cells-j;        /* Compute cell offset for cell j of */
 
                                        /* of sub domain domain tid */
 
@@ -534,7 +534,7 @@ __global__ void localWeightAndSweep_R(float * JR_d, float * val_d, const int N, 
 
         {
 
-            cell_index=(tid)*M+loop_over_y_cells-j;        /* Compute cell offset for cell j of */
+            cell_index=tid*M+loop_over_y_cells-j;        /* Compute cell offset for cell j of */
 
                                        /* of sub domain domain tid */
 			
