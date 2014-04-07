@@ -36,7 +36,7 @@
 #include <cuda.h>
 
 
-const int N = (int)pow(2,20);    /* num grid point */
+const int N = (int)pow(2,15);    /* num grid point */
 
 const int M = 16;      /* max number mesh cells */
 
@@ -893,7 +893,7 @@ __global__ void vectorAdd(float * I_d, float * IL_d, float * IR_d, const int N, 
 
 int main(void){
 
-	clock_t start = clock(), diff;
+	clock_t start = clock(), setupTime, kernelTime, cleanupTime, testTime, diff;
 	
 	float L = 1.0;
 	float dx = L/((float)(N-1));
@@ -953,8 +953,8 @@ int main(void){
 	cudaMemcpy(IR_d,I,sizeof(float)*N,cudaMemcpyHostToDevice);
 	cudaMemcpy(I_d,I,sizeof(float)*N,cudaMemcpyHostToDevice);
 
-	
-	diff = clock()-start;
+	setupTime = clock();
+	diff = setupTime-start;
 	int sec = diff/ CLOCKS_PER_SEC;
 	printf("Setup time: %d seconds\n", sec);
 	
@@ -968,8 +968,9 @@ int main(void){
 	coarseToFineSweep_R<<<num_B,num_T>>>(IR_d,JR_d,N,M,nu);
 	vectorAdd<<<num_B,num_T>>>(I_d,IL_d,IR_d,N,M);
 	}
-
-	diff = clock() - start - diff;
+	
+	kernelTime = clock();
+	diff = kernelTime-setupTime;
 	sec = diff/ CLOCKS_PER_SEC;
 	printf("Kernel time: %d seconds\n", sec);
 
@@ -985,6 +986,10 @@ int main(void){
 	cudaFree(IR_d);
 	cudaFree(I_d);
 	
+	cleanupTime = clock();
+	diff = cleanupTime-kernelTime;
+	sec = diff/ CLOCKS_PER_SEC;
+	printf("Clean up time: %d seconds\n",sec);
 	
 	/* Compute test integral value. */
 	
@@ -1000,7 +1005,10 @@ int main(void){
 	}
 	
 	printf("Maximum error: %d \n", err);
-	
+	testTime = clock();
+	diff = testTime-cleanupTime;
+	sec = diff/ CLOCKS_PER_SEC;
+	printf("Test time: %d seconds\n",sec);
 	
 
 	
