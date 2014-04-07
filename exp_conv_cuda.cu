@@ -260,11 +260,11 @@ __global__ void coarseSweep_L(float * IL_d, float * JL_d, const int N, const int
 
     /* let the krenal address more than a single sub domain */
 
-    while(tid<k_tot-1){
+    while(tid<(k_tot-1)){
 
 
 
-        if((tid==k_tot-2)&&(test))
+        if((tid==(k_tot-2))&&(test))
 		{
 			recursion_coeff = ex_end;
 			subdom_offset = k_end;
@@ -280,7 +280,7 @@ __global__ void coarseSweep_L(float * IL_d, float * JL_d, const int N, const int
 		}	
 
 
-        cell_index=tid*M+subdom_offset-1;        /* Compute cell offset for cell j of */
+        cell_index=M*(tid+1)-1;        /* Compute cell offset for cell j of */
 
                                        /* of sub domain domain tid */
 
