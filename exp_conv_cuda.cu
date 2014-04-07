@@ -733,8 +733,8 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
     while(tid<k_tot-1){
 
 
-
-        if((tid==k_tot-1)&&(test))
+		/*
+        if((tid==k_tot-2)&&(test))
 		{
             loop_over_y_cells= k_end;
 
@@ -745,8 +745,11 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
             loop_over_y_cells= M;
 		
 		}
+		*/
 		
-		source_index = M*tid+loop_over_y_cells;
+		loop_over_y_cells = M;
+		
+		source_index = M*(tid+1);
 		push_tracker = IR_d[source_index];
 		
         for(j=1;j<loop_over_y_cells+1; j++)
