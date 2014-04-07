@@ -1,0 +1,16 @@
+#!/bin/bash -login
+#PBS -l nodes=1:ppn=1:gfx10,gres=gpu:1,feature=gpgpu
+#PBS -l walltime=00:30:00
+#PBS -l mem=16gb
+#PBS -j oe
+#PBS -N exp_conv_cuda
+
+module load CUDA/5.0
+###module load cudatoolkit
+
+cd ${PBS_O_WORKDIR}
+
+make exp_conv_cuda
+./exp_conv_cuda
+
+###nvprof ./exp_conv_cuda
