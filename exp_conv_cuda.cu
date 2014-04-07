@@ -363,11 +363,11 @@ __global__ void coarseToFineSweep_L(float * IL_d, float * JL_d, const int N, con
 
     /* let the krenal address more than a single sub domain */
 
-    while(tid<k_tot-1){
+    while(tid<(k_tot-1)){
 
 
 
-        if((tid==k_tot-2)&&(test))
+        if((tid==(k_tot-2))&&(test))
 		{
             loop_over_y_cells= k_end;
 		}
@@ -378,11 +378,11 @@ __global__ void coarseToFineSweep_L(float * IL_d, float * JL_d, const int N, con
 		}
 		
 		/* Index of IL to be used as source for sweep - last grid point in subdom tid */
-		source_index = tid*M+loop_over_y_cells-1; 
+		source_index = M*(tid+1)-1; 
 		
 		push_tracker = IL_d[source_index];
 		
-        for(j=1;j<loop_over_y_cells; j++)
+        for(j=1;j<(loop_over_y_cells+1); j++)
 
         {
 
