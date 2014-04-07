@@ -486,12 +486,12 @@ __global__ void localWeightAndSweep_R(float * JR_d, float * val_d, const int N, 
 		/* We have that JR[0] is NOT zero, so we need special treatment of the left endpoint for JR. */
 		if(tid==0)
 		{
-			endLoopIndex = loop_over_y_cells;
+			startLoopIndex = 1;
 			JR_d[0] = P*val_d[0]+Q*val_d[1]+R*(val_d[1]-2.0*val_d[0]+val_d[N-2]); /* For periodic integral */
 		}
 		else
 		
-			endLoopIndex = loop_over_y_cells+1;
+			startLoopIndex = 0;
 
 		
         
@@ -501,12 +501,12 @@ __global__ void localWeightAndSweep_R(float * JR_d, float * val_d, const int N, 
 		/* We have that JR[N-1]=0. */
 		if (tid==k_tot-1)
 		{
-			startLoopIndex = 2;
+			endLoopIndex = loop_over_y_cells-1;
 			JR_d[N-1]=0.0;
 		}	
 		else
 			
-			startLoopIndex = 1;
+			endLoopIndex = loop_over_y_cells;
 		
 		
 		
@@ -516,7 +516,7 @@ __global__ void localWeightAndSweep_R(float * JR_d, float * val_d, const int N, 
 
         {
 
-            cell_index=tid*M+loop_over_y_cells-j;        /* Compute cell offset for cell j of */
+            cell_index=tid*M+j;        /* Compute cell offset for cell j of */
 
                                        /* of sub domain domain tid */
 
@@ -616,41 +616,36 @@ __global__ void coarseSweep_R(float * IR_d, float * JR_d, const int N, const int
 
     while(tid<k_tot-1){
 
-
-
-        if((tid==0)&&(test))
-		{
-			recursion_coeff = ex_end;
-			subdom_offset = k_end;
-			cell_index = N-subdom_offset;
+		if(tid==0){
+			if(test){
+				recursion_coeff = ex_subdom;
+				subdom_offset = M;
+				cell_index = N-k_end;
+			}
+			else{
+				recursion_coeff = ex_subdom;
+				subdom_offset = M;
+				cell_index = N-M;
+			}
+			IR_d[cell_index]=JR_d[cell_index];
 		}
-
-            
-        else{
-			if(test)
-		{
-            recursion_coeff = ex_subdom;
-			subdom_offset = M;
-			cell_index = N-k_end-(tid-1)*M-subdom_offset;
-		}	
 		else{
-			recursion_coeff = ex_subdom;
-			subdom_offset = M;
-			cell_index = N-(tid*M)-subdom_offset;
+			if(test){
+            	recursion_coeff = ex_subdom;
+				subdom_offset = M;
+				cell_index = N-k_end-tid*M;
+			}	
+			else{
+				recursion_coeff = ex_subdom;
+				subdom_offset = M;
+				cell_index = N-(tid+1)*M;
+			}
 		}
-		}
 
-
-           /* Compute cell offset for cell j of */
-
-                                       /* of sub domain domain tid */
-
-
-
-                                       /* Compute integral */
+		
 
 			
-		IR_d[cell_index]=JR_d[cell_index] + IR_d[cell_index+subdom_offset]*recursion_coeff;
+		IR_d[cell_index-subdom_offset]=JR_d[cell_index-subdom_offset] + IR_d[cell_index]*recursion_coeff;
 
 
         
@@ -997,8 +992,8 @@ int main(void){
 		x = (float)j*dx;
 		err_temp = abs(I[j]-(2.0-exp(-alpha*x)-exp(-alpha*(L-x))));
 		
-		if (err_temp>0)
-			printf("New max err of %f at gridpoint j = %i \n", err_temp,j);
+		if (err_temp>1e-6)
+			printf("Error of %f at grid point j = %i \n", err_temp,j);
 		
 		if (err_temp>err){
 			err = err_temp;
