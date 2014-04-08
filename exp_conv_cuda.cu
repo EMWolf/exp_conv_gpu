@@ -716,11 +716,8 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
 
     /* let the krenal address more than a single sub domain */
 
-    while(tid<k_tot-1){
-
-
-		/*
-        if((tid==k_tot-2)&&(test))
+    while(tid<k_tot){
+        if((tid==k_tot-1)&&(test))
 		{
             loop_over_y_cells= k_end;
 
@@ -731,19 +728,37 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
             loop_over_y_cells= M;
 		
 		}
-		*/
+
 		
-		loop_over_y_cells = M;
+        if(tid==k_tot-1)
+		{
+			source_index = N-1;
+			push_tracker = (float)0;
+			startLoopIndex = 0;
+			endLoopIndex = loop_over_y_cells+1;
+
+		}
+
+        else
+		{	
+			source_index = M*(tid+1);
+			push_tracker = IR_d[source_index];
+			startLoopIndex = 1;
+			endLoopIndex = loop_over_y_cells+1;
+		
+		}
+		
+		
+		
 		
 		
 		/* Fix this part! 
 		The sweep must be done on all subdomains - including the first/last - in order to write to IR/IL. 
 		Set push_tracker, source_index, startLoopIndex and endLoopIndex appropriately for interior/boundary cases.
 		Note: set push_tracker=0 for boundary case. */
-		source_index = M*(tid+1);
-		push_tracker = IR_d[source_index];
 		
-        for(j=1;j<loop_over_y_cells+1; j++)
+		
+        for(j=startLoopIndex;j<endLoopIndex; j++)
 
         {
 
