@@ -352,28 +352,54 @@ __global__ void coarseToFineSweep_L(float * IL_d, float * JL_d, const int N, con
 
     /* let the krenal address more than a single sub domain */
 
-    while(tid<(k_tot-1)){
+    while(tid<k_tot){
+        if((tid==k_tot-1)&&(test))
+		{
+            loop_over_y_cells= k_end;
+
+		}
+
+        else
+		{	
+            loop_over_y_cells= M;
 		
-		if(tid==(k_tot-2)){
-			if(test){
-				loop_over_y_cells = k_end+1;
-			}
-			else{
-				loop_over_y_cells = M+1;
-			}
 		}
-		else{
-			loop_over_y_cells = M;
+
+		
+        if(tid==k_tot-1)
+		{
+			source_index = M*tid;
+			push_tracker = IL_d[source_index];
+			startLoopIndex = 1;
+			endLoopIndex = loop_over_y_cells;
+
 		}
+		else if(tid==0)
+		{
+			sourceIndex = 0;
+			push_tracker = (float)0;
+			startLoopIndex = 1;
+			endLoopIndex = loop_over_y_cells;
+		}
+
+        else
+		{	
+			source_index = M*(tid+1);
+			push_tracker = IL_d[source_index];
+			startLoopIndex = 1;
+			endLoopIndex = loop_over_y_cells;
+		
+		}
+
 
 
 		
 		/* Index of IL to be used as source for sweep - last grid point in subdom tid */
-		source_index = M*(tid+1)-1; 
+		//source_index = M*(tid+1)-1; 
 		
-		push_tracker = IL_d[source_index];
+		//push_tracker = IL_d[source_index];
 		
-        for(j=1;j<loop_over_y_cells; j++)
+        for(j=startLoopIndex;j<endLoopIndex; j++)
 
         {
 
@@ -666,7 +692,7 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
 
     int loop_over_y_cells; /* number of mesh point in domain */
 
-    int cell_index,source_index,j;     /* cells_index is the flattend index of the cell */
+    int cell_index,source_index,j,startLoopIndex,endLoopIndex;     /* cells_index is the flattend index of the cell */
 
                            /* j is mearly a counter */
 
@@ -735,7 +761,7 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
 			source_index = N-1;
 			push_tracker = (float)0;
 			startLoopIndex = 0;
-			endLoopIndex = loop_over_y_cells+1;
+			endLoopIndex = loop_over_y_cells-1;
 
 		}
 
