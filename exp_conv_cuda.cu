@@ -260,23 +260,14 @@ __global__ void coarseSweep_L(float * IL_d, float * JL_d, const int N, const int
 
     /* let the krenal address more than a single sub domain */
 
-    while(tid<(k_tot-1)){
+    while(tid<(k_tot-2)){
 
 		if(tid==0){
 			IL_d[M-1]=JL_d[M-1];
 		}
-
-        if((tid==(k_tot-2))&&(test))
-		{
-			recursion_coeff = ex_subdom;
-			subdom_offset = M;
-		}
-        else
-		{
-            recursion_coeff = ex_subdom;
-			subdom_offset = M;
-		}	
-
+		
+		recursion_coeff = ex_subdom;
+		subdom_offset = M;
 
         cell_index=M*(tid+1)-1;        /* Compute cell offset for cell j of */
 
@@ -382,7 +373,7 @@ __global__ void coarseToFineSweep_L(float * IL_d, float * JL_d, const int N, con
 		
 		push_tracker = IL_d[source_index];
 		
-        for(j=1;j<(loop_over_y_cells); j++)
+        for(j=1;j<loop_over_y_cells; j++)
 
         {
 
@@ -744,6 +735,11 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
 		
 		loop_over_y_cells = M;
 		
+		
+		/* Fix this part! 
+		The sweep must be done on all subdomains - including the first/last - in order to write to IR/IL. 
+		Set push_tracker, source_index, startLoopIndex and endLoopIndex appropriately for interior/boundary cases.
+		Note: set push_tracker=0 for boundary case. */
 		source_index = M*(tid+1);
 		push_tracker = IR_d[source_index];
 		
@@ -843,14 +839,7 @@ __global__ void vectorAdd(float * I_d, float * IL_d, float * IR_d, const int N, 
 
             loop_over_y_cells= M;
 
-		
-		/* If we are in the last subdomain, the last point needs special treatment, as the usual quadrature stencil will extend outside of the domain. */
-		/* We have that JL[N-1] is NOT zero, so we need special treatment at the right endpoint for JL. */
-		/*if (tid==k_tot-1)
-		{
-			endLoopIndex = loop_over_y_cells - 1;
-		}*/
-		
+
 		startLoopIndex = 0;
 		endLoopIndex = loop_over_y_cells;
 		
