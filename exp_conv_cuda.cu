@@ -303,7 +303,7 @@ __global__ void coarseToFineSweep_L(float * IL_d, float * JL_d, const int N, con
 
     int loop_over_y_cells; /* number of mesh point in domain */
 
-    int cell_index,source_index,j;     /* cells_index is the flattend index of the cell */
+    int cell_index,source_index,j,startLoopIndex,endLoopIndex;     /* cells_index is the flattend index of the cell */
 
                            /* j is mearly a counter */
 
@@ -368,15 +368,15 @@ __global__ void coarseToFineSweep_L(float * IL_d, float * JL_d, const int N, con
 		
         if(tid==k_tot-1)
 		{
-			source_index = M*tid;
+			source_index = M*(tid)-1;
 			push_tracker = IL_d[source_index];
 			startLoopIndex = 1;
-			endLoopIndex = loop_over_y_cells;
+			endLoopIndex = loop_over_y_cells+1;
 
 		}
 		else if(tid==0)
 		{
-			sourceIndex = 0;
+			source_index = 0;
 			push_tracker = (float)0;
 			startLoopIndex = 1;
 			endLoopIndex = loop_over_y_cells;
@@ -384,7 +384,7 @@ __global__ void coarseToFineSweep_L(float * IL_d, float * JL_d, const int N, con
 
         else
 		{	
-			source_index = M*(tid+1);
+			source_index = M*(tid)-1;
 			push_tracker = IL_d[source_index];
 			startLoopIndex = 1;
 			endLoopIndex = loop_over_y_cells;
