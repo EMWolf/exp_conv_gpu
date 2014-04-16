@@ -36,7 +36,7 @@
 #include <cuda.h>
 
 
-const int N = (int)pow(2,15);    /* num grid point */
+const int N = (int)pow(2,7);    /* num grid point */
 
 const int M = 16;      /* max number mesh cells */
 
@@ -51,6 +51,74 @@ const int M = 16;      /* max number mesh cells */
 //     domain 0   domain 1   domain 2     domain K-2  domain K-1
 
 //
+
+
+void debug_tool_output_to_file(int * debugArray_ptr, const int N, const int M){
+    int k = N/M;           /* number of hole sub domains */
+
+    int k_end = N%M;         /* number of points in last domain */
+
+    int k_tot;             /* total number of sub domains */
+
+    int loop_over_y_cells; /* number of mesh point in domain */
+
+    int cell_index,i,j;     /* cells_index is the flattend index of the cell */
+
+                           /* j is mearly a counter */
+
+    bool test;             /* flag to indicate if we have a singel nun
+
+                              uifrom domain */
+
+
+
+    /* set up logic for when number of subdomains
+
+     does not evenly divide total number of cells in a line. */
+
+    if(k_end>0)
+
+    {
+
+        k_tot = k+1;       /* number of sub domains */
+
+        test = true;       /* flag for indicating a single special domain */
+
+    }
+
+    else
+
+    {
+
+        k_tot = k;         /* number of sub domians */
+
+        test = false;
+
+    }
+	
+	
+	FILE * fp;
+	
+	fp = fopen("debug_output.txt","w");
+	
+	for(int i = 0; i< k_tot; i++){
+		if((i==(k_tot-1))&&test){
+			loop_over_y_cells = k_end;
+		}
+		else{
+			loop_over_y_cells = M;
+		}
+		for(j = 0; j< loop_over_y_cells; j++ ){
+			
+			cell_index = i*M+j;
+			fputc(debugArray_ptr[cell_index],fp);
+		}
+		fprintf(fp,"\n");
+	}
+	
+	fclose(fp);
+	
+}
 
 __global__ void localWeightAndSweep_L(float *JL_d, float *val_d, const int N, const int M, float nu)
 
@@ -157,7 +225,8 @@ __global__ void localWeightAndSweep_L(float *JL_d, float *val_d, const int N, co
 		
 		
 		
-		/* Perform the local weight step across the subdomain. */
+		/* Perform the local weight step across the subdomain. 
+		Every point in every subdomain (except for the domain boundary points) should be set here. */
         for(j=startLoopIndex;j<endLoopIndex; j++)
 
         {
@@ -528,7 +597,6 @@ __global__ void localWeightAndSweep_R(float * JR_d, float * val_d, const int N, 
 		
 		
 		/* Perform the local weight step across the subdomain. */
-		// FIX: Change order of the loop by modifying cell_index in the loop and startLoopIndex and endLoopIndex in the above.
         for(j=startLoopIndex;j<endLoopIndex; j++)
 
         {
@@ -761,7 +829,7 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
 			source_index = N-1;
 			push_tracker = (float)0;
 			startLoopIndex = 0;
-			endLoopIndex = loop_over_y_cells-1;
+			endLoopIndex = loop_over_y_cells;
 
 		}
 
@@ -933,6 +1001,11 @@ int main(void){
     float val[N];
 	float I[N];    //host memory
 
+	int debugArray[N];
+	int * debugArray_ptr;
+	
+	int * debugArray_d;
+
     float * val_d; // Integrand
 
 	float * JL_d;
@@ -957,6 +1030,7 @@ int main(void){
 	cudaMalloc((void **) &IR_d,sizeof(float)*N);
 	cudaMalloc((void **) &I_d,sizeof(float)*N);
 
+	cudaMalloc((void **) &debugArray_d,sizeof(int)*N);
     //Set Inital Condtion...
 
     for(int i=0;i<N;i++){
@@ -964,6 +1038,8 @@ int main(void){
         val[i]=(float) 1;
 
 		I[i]=(float) 0;
+		
+		debugArray[i] = 0;
     };
 
 
@@ -977,6 +1053,8 @@ int main(void){
 	cudaMemcpy(IL_d,I,sizeof(float)*N,cudaMemcpyHostToDevice);
 	cudaMemcpy(IR_d,I,sizeof(float)*N,cudaMemcpyHostToDevice);
 	cudaMemcpy(I_d,I,sizeof(float)*N,cudaMemcpyHostToDevice);
+	
+	cudaMemcpy(debugArray_d,debugArray,sizeof(int)*N,cudaMemcpyHostToDevice);
 
 	setupTime = clock();
 	diff = setupTime-start;
@@ -985,7 +1063,7 @@ int main(void){
 	
     //Call kernel
 	for(int n = 0; n<Nt; n++){
-    localWeightAndSweep_L<<<num_B,num_T>>>(JL_d,val_d,N,M,nu);
+    localWeightAndSweep_L<<<num_B,num_T>>>(JL_d,val_d,N,M,nu,debugArray_d);
 	coarseSweep_L<<<1,1>>>(IL_d,JL_d,N,M,nu);
 	coarseToFineSweep_L<<<num_B,num_T>>>(IL_d,JL_d,N,M,nu);
     localWeightAndSweep_R<<<num_B,num_T>>>(JR_d,val_d,N,M,nu);
@@ -1002,7 +1080,7 @@ int main(void){
     //mem copy
 
     cudaMemcpy(I,I_d,sizeof(float)*N,cudaMemcpyDeviceToHost);
-
+	cudaMemcpy(debugArray,debugArray_d,sizeof(float)*N,cudaMemcpyDeviceToHost);
 
     cudaFree(val_d);
 	cudaFree(JL_d);
@@ -1010,6 +1088,7 @@ int main(void){
 	cudaFree(IL_d);
 	cudaFree(IR_d);
 	cudaFree(I_d);
+	cudaFree(debugArray_d);
 	
 	cleanupTime = clock();
 	diff = cleanupTime-kernelTime;
@@ -1022,7 +1101,7 @@ int main(void){
 		x = (float)j*dx;
 		err_temp = abs(I[j]-(2.0-exp(-alpha*x)-exp(-alpha*(L-x))));
 		
-		if (err_temp>1e-6)
+		if (err_temp>1.0e-6)
 			printf("Error of %f at grid point j = %i \n", err_temp,j);
 		
 		if (err_temp>err){
@@ -1039,7 +1118,7 @@ int main(void){
 	printf("Test time: %d seconds\n",sec);
 	
 
-	
+	debug_tool_output_to_file( debugArray_ptr, N, M);
 	
 	return 0;
 
