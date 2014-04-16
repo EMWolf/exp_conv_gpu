@@ -70,7 +70,7 @@ void debug_tool_output_to_file(int * debugArray_ptr, const int N, const int M){
 
                               uifrom domain */
 
-
+	char output;
 
     /* set up logic for when number of subdomains
 
@@ -101,7 +101,7 @@ void debug_tool_output_to_file(int * debugArray_ptr, const int N, const int M){
 	
 	fp = fopen("debug_output.txt","w");
 	
-	for(int i = 0; i< k_tot; i++){
+	for(i = 0; i< k_tot; i++){
 		if((i==(k_tot-1))&&test){
 			loop_over_y_cells = k_end;
 		}
@@ -111,7 +111,8 @@ void debug_tool_output_to_file(int * debugArray_ptr, const int N, const int M){
 		for(j = 0; j< loop_over_y_cells; j++ ){
 			
 			cell_index = i*M+j;
-			fputc(debugArray_ptr[cell_index],fp);
+			output = (char)(((int)'0')+debugArray_ptr[cell_index]);
+			fputc((int)output,fp);
 		}
 		fprintf(fp,"\n");
 	}
@@ -1002,7 +1003,7 @@ int main(void){
 	float I[N];    //host memory
 
 	int debugArray[N];
-	int * debugArray_ptr;
+	//int * debugArray_ptr = &debugArray;
 	
 	int * debugArray_d;
 
@@ -1063,7 +1064,7 @@ int main(void){
 	
     //Call kernel
 	for(int n = 0; n<Nt; n++){
-    localWeightAndSweep_L<<<num_B,num_T>>>(JL_d,val_d,N,M,nu,debugArray_d);
+    localWeightAndSweep_L<<<num_B,num_T>>>(JL_d,val_d,N,M,nu);
 	coarseSweep_L<<<1,1>>>(IL_d,JL_d,N,M,nu);
 	coarseToFineSweep_L<<<num_B,num_T>>>(IL_d,JL_d,N,M,nu);
     localWeightAndSweep_R<<<num_B,num_T>>>(JR_d,val_d,N,M,nu);
@@ -1118,7 +1119,7 @@ int main(void){
 	printf("Test time: %d seconds\n",sec);
 	
 
-	debug_tool_output_to_file( debugArray_ptr, N, M);
+	debug_tool_output_to_file( debugArray, N, M);
 	
 	return 0;
 
