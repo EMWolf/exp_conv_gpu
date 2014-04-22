@@ -36,7 +36,7 @@
 #include <cuda.h>
 
 
-const int N = (int)pow(2,15);    /* num grid point */
+const int N = (int)pow(2,27);    /* num grid point */
 
 const int M = 16;      /* max number mesh cells */
 
@@ -51,6 +51,22 @@ const int M = 16;      /* max number mesh cells */
 //     domain 0   domain 1   domain 2     domain K-2  domain K-1
 
 //
+
+
+/* 
+Function name: debug_tool_output_to_file
+
+Function type: host function
+
+Purpose: Given a to an array of single-digit integers of length N, outputs the array to a text file.
+			The text file is displayed in rows of M entries.
+
+Inputs: int * debugArray_ptr - a pointer to an array of single digit integers
+			const int N - the length of the array
+			const int M - the length of a row in the text file
+
+Outputs: generates a file named debug_output.txt
+*/
 
 
 void debug_tool_output_to_file(int * debugArray_ptr, const int N, const int M){
@@ -121,6 +137,23 @@ void debug_tool_output_to_file(int * debugArray_ptr, const int N, const int M){
 	
 }
 
+
+/*
+Function name: localWeightAndSweep_L
+
+Function type: CUDA kernel
+
+Purpose: Performs the local deposit step then the local sweep step over each subdomain for the left integral part.
+
+Inputs: float * JL_d - pointer to array on device storing the local integral values of the left part
+		float * val_d - pointer to array on device storing the integrand values
+		const int N - number of grid points in the array
+		const int M - number of grid points in one subdomain
+		float nu - numerical parameter equal to dx*alpha
+		int * debugArray_d - pointer to array of single-digit integers on device; used for diagnostic purposes only
+
+Outputs: JL_d is written to at all grid points
+*/
 __global__ void localWeightAndSweep_L(float *JL_d, float *val_d, const int N, const int M, float nu, int *debugArray_d)
 
 {
@@ -269,6 +302,25 @@ __global__ void localWeightAndSweep_L(float *JL_d, float *val_d, const int N, co
 
 }
 
+/*
+Function name: coarseSweep_L
+
+Function type: CUDA kernel, but a serial process; should be called with one block/one thread
+
+Purpose: performs the (serial) coarse grid sweep of the left integral part
+
+Inputs: float * IL_d - pointer to array on device string of total integral value of the left part
+		float * JL_d - pointer to array on device storing the local integral values of the left part
+		const int N - number of grid points in the array
+		const int M - number of grid points in one subdomain
+		float nu - numerical parameter equal to dx*alpha
+		int * debugArray_d - pointer to array of single-digit integers on device; used for diagnostic purposes only
+
+Outputs: IL_d is written to on the coarse grid points, which for the left integral part are the last points of each subdomain, 
+		with index of the form ((tid+1)*M-1). 
+		At these points, these are the final integral values and need not be updated again.
+*/
+
 __global__ void coarseSweep_L(float * IL_d, float * JL_d, const int N, const int M, float nu, int *debugArray_d)
 {
 
@@ -354,15 +406,32 @@ __global__ void coarseSweep_L(float * IL_d, float * JL_d, const int N, const int
 		
         
 
-        tid+=gridDim.x*blockDim.x;     /* jump to next sub domain this kernal */
+        tid+=gridDim.x*blockDim.x;     /* jump to next sub domain this kernel */
 
-                                       /* which is a who cuda GRID away */
+                                       /* which is a whole cuda GRID away */
 
-                                       /* grid dimtion - ridDim.x*blockDim.x */
+                                       /* grid dimension - gridDim.x*blockDim.x */
 
     };
 
 }
+
+/*
+Function name: coarseToFineSweep_L
+
+Function type: CUDA kernel
+
+Purpose: performs the final coarse grid to fine grid sweep of the left integral part
+
+Inputs: float * IL_d - pointer to array on device string of total integral value of the left part
+		float * JL_d - pointer to array on device storing the local integral values of the left part
+		const int N - number of grid points in the array
+		const int M - number of grid points in one subdomain
+		float nu - numerical parameter equal to dx*alpha
+		int * debugArray_d - pointer to array of single-digit integers on device; used for diagnostic purposes only
+
+Outputs: IL_d is written to everywhere in the domain, except for the endpoints which were already written to in coarseSweep_L
+*/
 
 __global__ void coarseToFineSweep_L(float * IL_d, float * JL_d, const int N, const int M, float nu, int * debugArray_d)
 {
@@ -496,6 +565,23 @@ __global__ void coarseToFineSweep_L(float * IL_d, float * JL_d, const int N, con
 
 }
 
+
+/*
+Function name: localWeightAndSweep_R
+
+Function type: CUDA kernel
+
+Purpose: Performs the local deposit step then the local sweep step over each subdomain for the right integral part.
+
+Inputs: float * JR_d - pointer to array on device storing the local integral values of the right part
+		float * val_d - pointer to array on device storing the integrand values
+		const int N - number of grid points in the array
+		const int M - number of grid points in one subdomain
+		float nu - numerical parameter equal to dx*alpha
+		int * debugArray_d - pointer to array of single-digit integers on device; used for diagnostic purposes only
+
+Outputs: JR_d is written to at all grid points
+*/
 __global__ void localWeightAndSweep_R(float * JR_d, float * val_d, const int N, const int M, float nu, int * debugArray_d)
 
 {
@@ -643,6 +729,25 @@ __global__ void localWeightAndSweep_R(float * JR_d, float * val_d, const int N, 
 
 }
 
+
+/*
+Function name: coarseSweep_R
+
+Function type: CUDA kernel, but a serial process; should be called with one block/one thread
+
+Purpose: performs the (serial) coarse grid sweep of the right integral part
+
+Inputs: float * IR_d - pointer to array on device string of total integral value of the right part
+		float * JR_d - pointer to array on device storing the local integral values of the right part
+		const int N - number of grid points in the array
+		const int M - number of grid points in one subdomain
+		float nu - numerical parameter equal to dx*alpha
+		int * debugArray_d - pointer to array of single-digit integers on device; used for diagnostic purposes only
+
+Outputs: IR_d is written to on the coarse grid points, which for the right integral part are the first points of each subdomain, 
+		with index of the form tid*M. 
+		At these points, these are the final integral values and need not be updated again.
+*/
 __global__ void coarseSweep_R(float * IR_d, float * JR_d, const int N, const int M, float nu, int * debugArray_d)
 
 {
@@ -758,6 +863,23 @@ __global__ void coarseSweep_R(float * IR_d, float * JR_d, const int N, const int
 
 }
 
+
+/*
+Function name: coarseToFineSweep_R
+
+Function type: CUDA kernel
+
+Purpose: performs the final coarse grid to fine grid sweep of the right integral part
+
+Inputs: float * IR_d - pointer to array on device string of total integral value of the right part
+		float * JR_d - pointer to array on device storing the local integral values of the right part
+		const int N - number of grid points in the array
+		const int M - number of grid points in one subdomain
+		float nu - numerical parameter equal to dx*alpha
+		int * debugArray_d - pointer to array of single-digit integers on device; used for diagnostic purposes only
+
+Outputs: IR_d is written to everywhere in the domain, except for the endpoints which were already written to in coarseSweep_R
+*/
 __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, const int M, float nu, int * debugArray_d)
 
 {
@@ -886,6 +1008,24 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
     };
 
 }
+
+/*
+Function name: vectorAdd
+
+Function type: CUDA kernel
+
+Purpose: adds two arrays on the device - I_d = IL_d + IR_d
+
+Inputs: float * I_d - pointer to array on device containing the summed values
+		float * IL_d - pointer to array on device
+		float * IR_d - pointer to array on device
+		const int N - number of grid points in the array
+		const int M - number of grid points in one subdomain
+		int * debugArray_d - pointer to array of single-digit integers on device; used for diagnostic purposes only
+		
+Outputs: I_d is written to at every grid point
+
+*/
 
 __global__ void vectorAdd(float * I_d, float * IL_d, float * IR_d, const int N, const int M, int * debugArray_d){
 
@@ -1131,7 +1271,7 @@ int main(void){
 	printf("Test time: %d seconds\n",sec);
 	
 
-	debug_tool_output_to_file( debugArray, N, M);
+	//debug_tool_output_to_file( debugArray, N, M);
 	
 	return 0;
 
