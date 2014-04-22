@@ -58,7 +58,7 @@ Function name: debug_tool_output_to_file
 
 Function type: host function
 
-Purpose: Given a to an array of single-digit integers of length N, outputs the array to a text file.
+Purpose: Given a pointer to an array of single-digit integers of length N, outputs the array to a text file.
 			The text file is displayed in rows of M entries.
 
 Inputs: int * debugArray_ptr - a pointer to an array of single digit integers
@@ -70,7 +70,7 @@ Outputs: generates a file named debug_output.txt
 
 
 void debug_tool_output_to_file(int * debugArray_ptr, const int N, const int M){
-    int k = N/M;           /* number of hole sub domains */
+    int k = N/M;           /* number of whole sub domains */
 
     int k_end = N%M;         /* number of points in last domain */
 
@@ -80,11 +80,11 @@ void debug_tool_output_to_file(int * debugArray_ptr, const int N, const int M){
 
     int cell_index,i,j;     /* cells_index is the flattend index of the cell */
 
-                           /* j is mearly a counter */
+                           /* j is merely a counter */
 
-    bool test;             /* flag to indicate if we have a singel nun
+    bool test;             /* flag to indicate if we have a single nonuniform
 
-                              uifrom domain */
+                               sub domain */
 
 	char output;
 
@@ -106,7 +106,7 @@ void debug_tool_output_to_file(int * debugArray_ptr, const int N, const int M){
 
     {
 
-        k_tot = k;         /* number of sub domians */
+        k_tot = k;         /* number of sub domains */
 
         test = false;
 
@@ -158,7 +158,7 @@ __global__ void localWeightAndSweep_L(float *JL_d, float *val_d, const int N, co
 
 {
 
-    int k = N/M;           /* number of hole sub domains */
+    int k = N/M;           /* number of whole sub domains */
 
     int k_end = N%M;         /* number of points in last domain */
 
@@ -168,11 +168,11 @@ __global__ void localWeightAndSweep_L(float *JL_d, float *val_d, const int N, co
 
     int cell_index,j;     /* cells_index is the flattend index of the cell */
 
-                           /* j is mearly a counter */
+                           /* j is merely a counter */
 
-    bool test;             /* flag to indicate if we have a singel nun
+    bool test;             /* flag to indicate if we have a single nonuniform
 
-                              uifrom domain */
+                               sub domain */
 		
 
 	int startLoopIndex; /* Loop start index in subdomain - should be 1 in first subdomain, 0 in others. */
@@ -208,7 +208,7 @@ __global__ void localWeightAndSweep_L(float *JL_d, float *val_d, const int N, co
 
     {
 
-        k_tot = k;         /* number of sub domians */
+        k_tot = k;         /* number of sub domains */
 
         test = false;
 
@@ -216,13 +216,13 @@ __global__ void localWeightAndSweep_L(float *JL_d, float *val_d, const int N, co
 
 
 
-    /* use uniuck tid to identify which sub domain */
+    /* use unique tid to identify which sub domain */
 
     int tid = threadIdx.x+blockIdx.x*blockDim.x;  //index of sub domain
 
 
 
-    /* let the krenal address more than a single sub domain */
+    /* let the kernel address more than a single sub domain */
 
     while(tid<k_tot){
 		
@@ -292,11 +292,11 @@ __global__ void localWeightAndSweep_L(float *JL_d, float *val_d, const int N, co
 
         }
 
-        tid+=gridDim.x*blockDim.x;     /* jump to next sub domain this kernal */
+        tid+=gridDim.x*blockDim.x;     /* jump to next sub domain this kernel */
 
-                                       /* which is a who cuda GRID away */
+                                       /* which is a whole cuda GRID away */
 
-                                       /* grid dimtion - ridDim.x*blockDim.x */
+                                       /* grid dimension - gridDim.x*blockDim.x */
 
     };
 
@@ -324,21 +324,20 @@ Outputs: IL_d is written to on the coarse grid points, which for the left integr
 __global__ void coarseSweep_L(float * IL_d, float * JL_d, const int N, const int M, float nu, int *debugArray_d)
 {
 
-    int k = N/M;           /* number of hole sub domains */
+    int k = N/M;           /* number of whole sub domains */
 
     int k_end = N%M;         /* number of points in last domain */
 
     int k_tot;             /* total number of sub domains */
 
 
-
     int cell_index;     /* cells_index is the flattend index of the cell */
 
-                           /* j is mearly a counter */
+                           /* j is merely a counter */
 
-    bool test;             /* flag to indicate if we have a singel nun
+    //bool test;             /* flag to indicate if we have a single nonuniform
 
-                              uifrom domain */
+                               //sub domain */
 		
 
 
@@ -359,7 +358,7 @@ __global__ void coarseSweep_L(float * IL_d, float * JL_d, const int N, const int
 
         k_tot = k+1;       /* number of sub domains */
 
-        test = true;       /* flag for indicating a single special domain */
+        //test = true;       /* flag for indicating a single special domain */
 
     }
 
@@ -367,21 +366,21 @@ __global__ void coarseSweep_L(float * IL_d, float * JL_d, const int N, const int
 
     {
 
-        k_tot = k;         /* number of sub domians */
+        k_tot = k;         /* number of sub domains */
 
-        test = false;
+        //test = false;
 
     }
 
 
 
-    /* use uniuck tid to identify which sub domain */
+    /* use unique tid to identify which sub domain */
 
     int tid = threadIdx.x+blockIdx.x*blockDim.x;  //index of sub domain
 
 
 
-    /* let the krenal address more than a single sub domain */
+    /* let the kernel address more than a single sub domain */
 
     while(tid<(k_tot-2)){
 
@@ -436,7 +435,7 @@ Outputs: IL_d is written to everywhere in the domain, except for the endpoints w
 __global__ void coarseToFineSweep_L(float * IL_d, float * JL_d, const int N, const int M, float nu, int * debugArray_d)
 {
 
-    int k = N/M;           /* number of hole sub domains */
+    int k = N/M;           /* number of whole sub domains */
 
     int k_end = N%M;         /* number of points in last domain */
 
@@ -444,15 +443,18 @@ __global__ void coarseToFineSweep_L(float * IL_d, float * JL_d, const int N, con
 
     int loop_over_y_cells; /* number of mesh point in domain */
 
-    int cell_index,source_index,j,startLoopIndex,endLoopIndex;     /* cells_index is the flattend index of the cell */
+    int cell_index,j;     /* cells_index is the flattend index of the cell */
 
-                           /* j is mearly a counter */
+                           /* j is merely a counter */
 
-    bool test;             /* flag to indicate if we have a singel nun
+    bool test;             /* flag to indicate if we have a single nonuniform
 
-                              uifrom domain */
-
-
+                               sub domain */
+		
+	int startLoopIndex; /* Loop start index in subdomain. */
+	int endLoopIndex; /* Loop end index. */
+	int source_index;
+	
 	float ex = exp(-nu);
 
 
@@ -477,7 +479,7 @@ __global__ void coarseToFineSweep_L(float * IL_d, float * JL_d, const int N, con
 
     {
 
-        k_tot = k;         /* number of sub domians */
+        k_tot = k;         /* number of sub domains */
 
         test = false;
 
@@ -485,13 +487,13 @@ __global__ void coarseToFineSweep_L(float * IL_d, float * JL_d, const int N, con
 
 
 
-    /* use uniuck tid to identify which sub domain */
+    /* use unique tid to identify which sub domain */
 
     int tid = threadIdx.x+blockIdx.x*blockDim.x;  //index of sub domain
 
 
 
-    /* let the krenal address more than a single sub domain */
+    /* let the kernel address more than a single sub domain */
 
     while(tid<k_tot){
         if((tid==k_tot-1)&&(test))
@@ -555,11 +557,11 @@ __global__ void coarseToFineSweep_L(float * IL_d, float * JL_d, const int N, con
 			//debugArray_d[cell_index] += 1;
         }
 
-        tid+=gridDim.x*blockDim.x;     /* jump to next sub domain this kernal */
+        tid+=gridDim.x*blockDim.x;     /* jump to next sub domain this kernel */
 
-                                       /* which is a who cuda GRID away */
+                                       /* which is a whole cuda GRID away */
 
-                                       /* grid dimtion - ridDim.x*blockDim.x */
+                                       /* grid dimension - gridDim.x*blockDim.x */
 
     };
 
@@ -586,7 +588,7 @@ __global__ void localWeightAndSweep_R(float * JR_d, float * val_d, const int N, 
 
 {
 
-    int k = N/M;           /* number of hole sub domains */
+    int k = N/M;           /* number of whole sub domains */
 
     int k_end = N%M;         /* number of points in last domain */
 
@@ -596,11 +598,11 @@ __global__ void localWeightAndSweep_R(float * JR_d, float * val_d, const int N, 
 
     int cell_index,j;     /* cells_index is the flattend index of the cell */
 
-                           /* j is mearly a counter */
+                           /* j is merely a counter */
 
-    bool test;             /* flag to indicate if we have a singel nun
+    bool test;             /* flag to indicate if we have a single nonuniform
 
-                              uifrom domain */
+                               sub domain */
 	
 	int startLoopIndex; /* Loop start index in subdomain - should be 1 in first subdomain, 0 in others. */
 	int endLoopIndex; /* Loop end index - should be k_end-1 in the last subdomain, M in others. */ 
@@ -633,7 +635,7 @@ __global__ void localWeightAndSweep_R(float * JR_d, float * val_d, const int N, 
 
     {
 
-        k_tot = k;         /* number of sub domians */
+        k_tot = k;         /* number of sub domains */
 
         test = false;
 
@@ -641,7 +643,7 @@ __global__ void localWeightAndSweep_R(float * JR_d, float * val_d, const int N, 
 
 
 
-    /* use uniuck tid to identify which sub domain */
+    /* use unique tid to identify which sub domain */
 
     int tid = threadIdx.x+blockIdx.x*blockDim.x;  //index of sub domain
 
@@ -719,11 +721,11 @@ __global__ void localWeightAndSweep_R(float * JR_d, float * val_d, const int N, 
 
         }
 
-        tid+=gridDim.x*blockDim.x;     /* jump to next sub domain this kernal */
+        tid+=gridDim.x*blockDim.x;     /* jump to next sub domain this kernel */
 
-                                       /* which is a who cuda GRID away */
+                                       /* which is a whole cuda GRID away */
 
-                                       /* grid dimtion - ridDim.x*blockDim.x */
+                                       /* grid dimension - gridDim.x*blockDim.x */
 
     };
 
@@ -752,23 +754,22 @@ __global__ void coarseSweep_R(float * IR_d, float * JR_d, const int N, const int
 
 {
 
-    int k = N/M;           /* number of hole sub domains */
+    int k = N/M;           /* number of whole sub domains */
 
     int k_end = N%M;         /* number of points in last domain */
 
     int k_tot;             /* total number of sub domains */
 
 
-
     int cell_index;     /* cells_index is the flattend index of the cell */
 
-                           /* j is mearly a counter */
+                           /* j is merely a counter */
 
-    bool test;             /* flag to indicate if we have a singel nun
+    bool test;             /* flag to indicate if we have a single nonuniform
 
-                              uifrom domain */
-		
-
+                               sub domain */
+	
+	
 	float ex_subdom = exp(-nu*M);
 	float ex_end = exp(-nu*k_end);
 
@@ -794,7 +795,7 @@ __global__ void coarseSweep_R(float * IR_d, float * JR_d, const int N, const int
 
     {
 
-        k_tot = k;         /* number of sub domians */
+        k_tot = k;         /* number of sub domains */
 
         test = false;
 
@@ -802,17 +803,16 @@ __global__ void coarseSweep_R(float * IR_d, float * JR_d, const int N, const int
 
 
 
-    /* use uniuck tid to identify which sub domain */
+    /* use unique tid to identify which sub domain */
 
     int tid = threadIdx.x+blockIdx.x*blockDim.x;  //index of sub domain
 
 
 
-    /* let the krenal address more than a single sub domain */
+    /* let the kernel address more than a single sub domain */
 
     while(tid<k_tot-1){
 		
-		// PROBLEM!!! tid==0 case seems never to be activated!
 		if(tid==0){
 			if(test){
 				recursion_coeff = ex_subdom;
@@ -852,11 +852,11 @@ __global__ void coarseSweep_R(float * IR_d, float * JR_d, const int N, const int
 		
         
 
-        tid+=gridDim.x*blockDim.x;     /* jump to next sub domain this kernal */
+        tid+=gridDim.x*blockDim.x;     /* jump to next sub domain this kernel */
 
-                                       /* which is a who cuda GRID away */
+                                       /* which is a whole cuda GRID away */
 
-                                       /* grid dimtion - ridDim.x*blockDim.x */
+                                       /* grid dimension - gridDim.x*blockDim.x */
 
     };
 
@@ -884,7 +884,7 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
 
 {
 
-    int k = N/M;           /* number of hole sub domains */
+    int k = N/M;           /* number of whole sub domains */
 
     int k_end = N%M;         /* number of points in last domain */
 
@@ -892,14 +892,17 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
 
     int loop_over_y_cells; /* number of mesh point in domain */
 
-    int cell_index,source_index,j,startLoopIndex,endLoopIndex;     /* cells_index is the flattend index of the cell */
+    int cell_index,j;     /* cells_index is the flattend index of the cell */
 
-                           /* j is mearly a counter */
+                           /* j is merely a counter */
 
-    bool test;             /* flag to indicate if we have a singel nun
+    bool test;             /* flag to indicate if we have a single nonuniform
 
-                              uifrom domain */
-		
+                               sub domain */
+	
+	int startLoopIndex; /* Loop start index in subdomain - should be 1 in first subdomain, 0 in others. */
+	int endLoopIndex; /* Loop end index - should be k_end-1 in the last subdomain, M in others. */ 
+	int source_index;
 
 
 	float ex = exp(-nu);
@@ -926,7 +929,7 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
 
     {
 
-        k_tot = k;         /* number of sub domians */
+        k_tot = k;         /* number of sub domains */
 
         test = false;
 
@@ -934,13 +937,13 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
 
 
 
-    /* use uniuck tid to identify which sub domain */
+    /* use unique tid to identify which sub domain */
 
     int tid = threadIdx.x+blockIdx.x*blockDim.x;  //index of sub domain
 
 
 
-    /* let the krenal address more than a single sub domain */
+    /* let the kernel address more than a single sub domain */
 
     while(tid<k_tot){
         if((tid==k_tot-1)&&(test))
@@ -978,12 +981,6 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
 		
 		
 		
-		/* Fix this part! 
-		The sweep must be done on all subdomains - including the first/last - in order to write to IR/IL. 
-		Set push_tracker, source_index, startLoopIndex and endLoopIndex appropriately for interior/boundary cases.
-		Note: set push_tracker=0 for boundary case. */
-		
-		
         for(j=startLoopIndex;j<endLoopIndex; j++)
 
         {
@@ -999,11 +996,11 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
 			debugArray_d[cell_index] += 1;
         }
 
-        tid+=gridDim.x*blockDim.x;     /* jump to next sub domain this kernal */
+        tid+=gridDim.x*blockDim.x;     /* jump to next sub domain this kernel */
 
-                                       /* which is a who cuda GRID away */
+                                       /* which is a whole cuda GRID away */
 
-                                       /* grid dimtion - ridDim.x*blockDim.x */
+                                       /* grid dimension - gridDim.x*blockDim.x */
 
     };
 
@@ -1029,7 +1026,7 @@ Outputs: I_d is written to at every grid point
 
 __global__ void vectorAdd(float * I_d, float * IL_d, float * IR_d, const int N, const int M, int * debugArray_d){
 
-    int k = N/M;           /* number of hole sub domains */
+    int k = N/M;           /* number of whole sub domains */
 
     int k_end = N%M;         /* number of points in last domain */
 
@@ -1039,16 +1036,14 @@ __global__ void vectorAdd(float * I_d, float * IL_d, float * IR_d, const int N, 
 
     int cell_index,j;     /* cells_index is the flattend index of the cell */
 
-                           /* j is mearly a counter */
+                           /* j is merely a counter */
 
-    bool test;             /* flag to indicate if we have a singel nun
+    bool test;             /* flag to indicate if we have a single nonuniform
 
-                              uifrom domain */
-		
-
+                               sub domain */
+	
 	int startLoopIndex; /* Loop start index in subdomain - should be 1 in first subdomain, 0 in others. */
 	int endLoopIndex; /* Loop end index - should be k_end-1 in the last subdomain, M in others. */ 
-		
 
 
 
@@ -1125,12 +1120,11 @@ __global__ void vectorAdd(float * I_d, float * IL_d, float * IR_d, const int N, 
         }
 		
 		
-        tid+=gridDim.x*blockDim.x;     /* jump to next sub domain this kernal */
+        tid+=gridDim.x*blockDim.x;     /* jump to next sub domain this kernel */
 
-                                       /* which is a who cuda GRID away */
+                                       /* which is a whole cuda GRID away */
 
-                                       /* grid dimtion - ridDim.x*blockDim.x */
-
+                                       /* grid dimension - gridDim.x*blockDim.x */
     };
 
 }
