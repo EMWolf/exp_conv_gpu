@@ -36,7 +36,7 @@
 #include <cuda.h>
 
 
-const int N = (int)pow(2,7);    /* num grid point */
+const int N = (int)pow(2,15);    /* num grid point */
 
 const int M = 16;      /* max number mesh cells */
 
@@ -121,7 +121,7 @@ void debug_tool_output_to_file(int * debugArray_ptr, const int N, const int M){
 	
 }
 
-__global__ void localWeightAndSweep_L(float *JL_d, float *val_d, const int N, const int M, float nu)
+__global__ void localWeightAndSweep_L(float *JL_d, float *val_d, const int N, const int M, float nu, int *debugArray_d)
 
 {
 
@@ -241,7 +241,7 @@ __global__ void localWeightAndSweep_L(float *JL_d, float *val_d, const int N, co
                                        /* Compute integral */
 			
 			JL_d[cell_index]=P*val_d[cell_index]+Q*val_d[cell_index-1]+R*(val_d[cell_index+1]-2.0*val_d[cell_index]+val_d[cell_index-1]);
-
+			//debugArray_d[cell_index] += 1;
         }
 		
 		
@@ -255,6 +255,7 @@ __global__ void localWeightAndSweep_L(float *JL_d, float *val_d, const int N, co
                                        /* of sub domain domain tid */
 			
 			JL_d[cell_index]+=ex*JL_d[cell_index-1]; /* Perform recursive push */
+			//debugArray_d[cell_index] += 1;
 
         }
 
@@ -268,7 +269,7 @@ __global__ void localWeightAndSweep_L(float *JL_d, float *val_d, const int N, co
 
 }
 
-__global__ void coarseSweep_L(float * IL_d, float * JL_d, const int N, const int M, float nu)
+__global__ void coarseSweep_L(float * IL_d, float * JL_d, const int N, const int M, float nu, int *debugArray_d)
 {
 
     int k = N/M;           /* number of hole sub domains */
@@ -334,6 +335,7 @@ __global__ void coarseSweep_L(float * IL_d, float * JL_d, const int N, const int
 
 		if(tid==0){
 			IL_d[M-1]=JL_d[M-1];
+			//debugArray_d[M-1] += 1;
 		}
 		
 		recursion_coeff = ex_subdom;
@@ -346,7 +348,7 @@ __global__ void coarseSweep_L(float * IL_d, float * JL_d, const int N, const int
 
 			
 		IL_d[cell_index+subdom_offset]=JL_d[cell_index+subdom_offset]+ IL_d[cell_index]*recursion_coeff;
-
+		//debugArray_d[cell_index+subdom_offset] += 1;
 
         
 		
@@ -362,7 +364,7 @@ __global__ void coarseSweep_L(float * IL_d, float * JL_d, const int N, const int
 
 }
 
-__global__ void coarseToFineSweep_L(float * IL_d, float * JL_d, const int N, const int M, float nu)
+__global__ void coarseToFineSweep_L(float * IL_d, float * JL_d, const int N, const int M, float nu, int * debugArray_d)
 {
 
     int k = N/M;           /* number of hole sub domains */
@@ -449,7 +451,7 @@ __global__ void coarseToFineSweep_L(float * IL_d, float * JL_d, const int N, con
 			source_index = 0;
 			push_tracker = (float)0;
 			startLoopIndex = 1;
-			endLoopIndex = loop_over_y_cells;
+			endLoopIndex = loop_over_y_cells-1;
 		}
 
         else
@@ -480,6 +482,8 @@ __global__ void coarseToFineSweep_L(float * IL_d, float * JL_d, const int N, con
 			
 			IL_d[cell_index]= JL_d[cell_index]+ex*push_tracker;
 			push_tracker = push_tracker*ex;
+			
+			//debugArray_d[cell_index] += 1;
         }
 
         tid+=gridDim.x*blockDim.x;     /* jump to next sub domain this kernal */
@@ -492,7 +496,7 @@ __global__ void coarseToFineSweep_L(float * IL_d, float * JL_d, const int N, con
 
 }
 
-__global__ void localWeightAndSweep_R(float * JR_d, float * val_d, const int N, const int M, float nu)
+__global__ void localWeightAndSweep_R(float * JR_d, float * val_d, const int N, const int M, float nu, int * debugArray_d)
 
 {
 
@@ -611,7 +615,7 @@ __global__ void localWeightAndSweep_R(float * JR_d, float * val_d, const int N, 
                                        /* Compute integral */
 			
 			JR_d[cell_index]=P*val_d[cell_index]+Q*val_d[cell_index+1]+R*(val_d[cell_index+1]-2.0*val_d[cell_index]+val_d[cell_index-1]);
-
+			//debugArray_d[cell_index] += 1;
         }
 		
 		
@@ -625,6 +629,7 @@ __global__ void localWeightAndSweep_R(float * JR_d, float * val_d, const int N, 
                                        /* of sub domain domain tid */
 			
 			JR_d[cell_index]+=ex*JR_d[cell_index+1]; /* Perform recursive push */
+			//debugArray_d[cell_index] += 1;
 
         }
 
@@ -638,7 +643,7 @@ __global__ void localWeightAndSweep_R(float * JR_d, float * val_d, const int N, 
 
 }
 
-__global__ void coarseSweep_R(float * IR_d, float * JR_d, const int N, const int M, float nu)
+__global__ void coarseSweep_R(float * IR_d, float * JR_d, const int N, const int M, float nu, int * debugArray_d)
 
 {
 
@@ -701,7 +706,8 @@ __global__ void coarseSweep_R(float * IR_d, float * JR_d, const int N, const int
     /* let the krenal address more than a single sub domain */
 
     while(tid<k_tot-1){
-
+		
+		// PROBLEM!!! tid==0 case seems never to be activated!
 		if(tid==0){
 			if(test){
 				recursion_coeff = ex_subdom;
@@ -714,6 +720,8 @@ __global__ void coarseSweep_R(float * IR_d, float * JR_d, const int N, const int
 				cell_index = N-M;
 			}
 			IR_d[cell_index]=JR_d[cell_index];
+			
+			debugArray_d[cell_index] += 1;
 		}
 		else{
 			if(test){
@@ -726,13 +734,14 @@ __global__ void coarseSweep_R(float * IR_d, float * JR_d, const int N, const int
 				subdom_offset = M;
 				cell_index = N-(tid+1)*M;
 			}
+			//debugArray_d[cell_index] += 1;
 		}
 
 		
 
 			
 		IR_d[cell_index-subdom_offset]=JR_d[cell_index-subdom_offset] + IR_d[cell_index]*recursion_coeff;
-
+		debugArray_d[cell_index-subdom_offset] += 1;
 
         
 		
@@ -749,7 +758,7 @@ __global__ void coarseSweep_R(float * IR_d, float * JR_d, const int N, const int
 
 }
 
-__global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, const int M, float nu)
+__global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, const int M, float nu, int * debugArray_d)
 
 {
 
@@ -829,8 +838,8 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
 		{
 			source_index = N-1;
 			push_tracker = (float)0;
-			startLoopIndex = 0;
-			endLoopIndex = loop_over_y_cells;
+			startLoopIndex = 1;
+			endLoopIndex = loop_over_y_cells-1;
 
 		}
 
@@ -839,7 +848,7 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
 			source_index = M*(tid+1);
 			push_tracker = IR_d[source_index];
 			startLoopIndex = 1;
-			endLoopIndex = loop_over_y_cells+1;
+			endLoopIndex = loop_over_y_cells;
 		
 		}
 		
@@ -864,6 +873,8 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
 			
 			IR_d[cell_index]= JR_d[cell_index]+ex*push_tracker;
 			push_tracker = push_tracker*ex;
+			
+			debugArray_d[cell_index] += 1;
         }
 
         tid+=gridDim.x*blockDim.x;     /* jump to next sub domain this kernal */
@@ -876,7 +887,7 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
 
 }
 
-__global__ void vectorAdd(float * I_d, float * IL_d, float * IR_d, const int N, const int M){
+__global__ void vectorAdd(float * I_d, float * IL_d, float * IR_d, const int N, const int M, int * debugArray_d){
 
     int k = N/M;           /* number of hole sub domains */
 
@@ -967,8 +978,9 @@ __global__ void vectorAdd(float * I_d, float * IL_d, float * IR_d, const int N, 
                                        /* Compute integral */
 			
 			I_d[cell_index]=IL_d[cell_index]+IR_d[cell_index];
-			//IL_d[cell_index] = (float) 0;
-			//IR_d[cell_index] = (float) 0;
+			
+			
+			//debugArray_d[cell_index] += 1;
 
         }
 		
@@ -1064,13 +1076,13 @@ int main(void){
 	
     //Call kernel
 	for(int n = 0; n<Nt; n++){
-    localWeightAndSweep_L<<<num_B,num_T>>>(JL_d,val_d,N,M,nu);
-	coarseSweep_L<<<1,1>>>(IL_d,JL_d,N,M,nu);
-	coarseToFineSweep_L<<<num_B,num_T>>>(IL_d,JL_d,N,M,nu);
-    localWeightAndSweep_R<<<num_B,num_T>>>(JR_d,val_d,N,M,nu);
-	coarseSweep_R<<<1,1>>>(IR_d,JR_d,N,M,nu);
-	coarseToFineSweep_R<<<num_B,num_T>>>(IR_d,JR_d,N,M,nu);
-	vectorAdd<<<num_B,num_T>>>(I_d,IL_d,IR_d,N,M);
+    localWeightAndSweep_L<<<num_B,num_T>>>(JL_d,val_d,N,M,nu,debugArray_d);
+	coarseSweep_L<<<1,1>>>(IL_d,JL_d,N,M,nu,debugArray_d);
+	coarseToFineSweep_L<<<num_B,num_T>>>(IL_d,JL_d,N,M,nu,debugArray_d);
+    localWeightAndSweep_R<<<num_B,num_T>>>(JR_d,val_d,N,M,nu,debugArray_d);
+	coarseSweep_R<<<1,1>>>(IR_d,JR_d,N,M,nu,debugArray_d);
+	coarseToFineSweep_R<<<num_B,num_T>>>(IR_d,JR_d,N,M,nu,debugArray_d);
+	vectorAdd<<<num_B,num_T>>>(I_d,IL_d,IR_d,N,M,debugArray_d);
 	}
 	
 	kernelTime = clock();
