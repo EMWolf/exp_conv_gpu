@@ -28,7 +28,7 @@
 #include <cuda.h>
 
 
-const int N = (int)pow(2,29);    /* num grid point */
+const int N = (int)pow(2,17);    /* num grid point */
 
 const int M = 16;      /* max number grid points in a subdomain */
 
@@ -327,7 +327,7 @@ __global__ void coarseSweep_L(float * IL_d, float * JL_d, const int N, const int
 
                            /* j is merely a counter */
 
-    //bool test;             /* flag to indicate if we have a single nonuniform
+    bool test;             /* flag to indicate if we have a single nonuniform
 
                                //sub domain */
 		
@@ -350,7 +350,7 @@ __global__ void coarseSweep_L(float * IL_d, float * JL_d, const int N, const int
 
         k_tot = k+1;       /* number of sub domains */
 
-        //test = true;       /* flag for indicating a single special domain */
+        test = true;       /* flag for indicating a single special domain */
 
     }
 
@@ -360,7 +360,7 @@ __global__ void coarseSweep_L(float * IL_d, float * JL_d, const int N, const int
 
         k_tot = k;         /* number of sub domains */
 
-        //test = false;
+        test = false;
 
     }
 
@@ -381,7 +381,7 @@ __global__ void coarseSweep_L(float * IL_d, float * JL_d, const int N, const int
 			//debugArray_d[M-1] += 1;
 		}
 		
-		if ((tid==ktot-2)&&(test)){
+		if ((tid==k_tot-2)&&(test)){
 			subdom_offset = k_end;
 			recursion_coeff = ex_end;
 		}
@@ -961,10 +961,10 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
 		
         if(tid==k_tot-1)
 		{
-			source_index = N-1;
+			source_index = N;
 			push_tracker = (float)0;
 			startLoopIndex = 1;
-			endLoopIndex = loop_over_y_cells-1;
+			endLoopIndex = loop_over_y_cells;
 
 		}
 
@@ -1137,8 +1137,8 @@ int main(void){
 	
 	float L = 1.0;
 	float dx = L/((float)(N-1));
-	float nu = 1.0;
-	float alpha = nu/dx;
+	float alpha = 100.0;
+	float nu = alpha*dx;
 	float x;
 	float err = 0.0;
 	float err_temp;
@@ -1249,7 +1249,7 @@ int main(void){
 		err_temp = abs(I[j]-(2.0-exp(-alpha*x)-exp(-alpha*(L-x))));
 		
 		if (err_temp>1.0e-6)
-			printf("Error of %f at grid point j = %i \n", err_temp,j);
+			//printf("Error of %f at grid point j = %i \n", err_temp,j);
 		
 		if (err_temp>err){
 			err = err_temp;
