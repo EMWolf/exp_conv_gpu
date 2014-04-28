@@ -1,11 +1,3 @@
-//
-
-//  test_cuda.c
-
-//
-
-//
-
 //  Created by Andrew Christlieb on 3/3/14.
 
 //  This code is a CUDA kernal for domain decompositon
@@ -36,13 +28,13 @@
 #include <cuda.h>
 
 
-const int N = (int)pow(2,27);    /* num grid point */
+const int N = (int)pow(2,29);    /* num grid point */
 
-const int M = 16;      /* max number mesh cells */
+const int M = 16;      /* max number grid points in a subdomain */
 
 
 
-//each tid - denotes a subdominant up to M cells
+//each tid denotes a subdomain of up to M cells
 
 //
 
@@ -78,7 +70,7 @@ void debug_tool_output_to_file(int * debugArray_ptr, const int N, const int M){
 
     int loop_over_y_cells; /* number of mesh point in domain */
 
-    int cell_index,i,j;     /* cells_index is the flattend index of the cell */
+    int cell_index,i,j;     /* cell_index is the flattened index of the cell */
 
                            /* j is merely a counter */
 
@@ -166,7 +158,7 @@ __global__ void localWeightAndSweep_L(float *JL_d, float *val_d, const int N, co
 
     int loop_over_y_cells; /* number of mesh point in domain */
 
-    int cell_index,j;     /* cells_index is the flattend index of the cell */
+    int cell_index,j;     /* cell_index is the flattened index of the cell */
 
                            /* j is merely a counter */
 
@@ -331,7 +323,7 @@ __global__ void coarseSweep_L(float * IL_d, float * JL_d, const int N, const int
     int k_tot;             /* total number of sub domains */
 
 
-    int cell_index;     /* cells_index is the flattend index of the cell */
+    int cell_index;     /* cell_index is the flattened index of the cell */
 
                            /* j is merely a counter */
 
@@ -382,15 +374,23 @@ __global__ void coarseSweep_L(float * IL_d, float * JL_d, const int N, const int
 
     /* let the kernel address more than a single sub domain */
 
-    while(tid<(k_tot-2)){
+    while(tid<(k_tot-1)){
 
 		if(tid==0){
 			IL_d[M-1]=JL_d[M-1];
 			//debugArray_d[M-1] += 1;
 		}
 		
-		recursion_coeff = ex_subdom;
-		subdom_offset = M;
+		if ((tid==ktot-2)&&(test)){
+			subdom_offset = k_end;
+			recursion_coeff = ex_end;
+		}
+		else{
+			subdom_offset = M;
+			recursion_coeff = ex_subdom;
+		}
+		
+		
 
         cell_index=M*(tid+1)-1;        /* Compute cell offset for cell j of */
 
@@ -443,7 +443,7 @@ __global__ void coarseToFineSweep_L(float * IL_d, float * JL_d, const int N, con
 
     int loop_over_y_cells; /* number of mesh point in domain */
 
-    int cell_index,j;     /* cells_index is the flattend index of the cell */
+    int cell_index,j;     /* cell_index is the flattened index of the cell */
 
                            /* j is merely a counter */
 
@@ -596,7 +596,7 @@ __global__ void localWeightAndSweep_R(float * JR_d, float * val_d, const int N, 
 
     int loop_over_y_cells; /* number of mesh point in domain */
 
-    int cell_index,j;     /* cells_index is the flattend index of the cell */
+    int cell_index,j;     /* cell_index is the flattened index of the cell */
 
                            /* j is merely a counter */
 
@@ -761,7 +761,7 @@ __global__ void coarseSweep_R(float * IR_d, float * JR_d, const int N, const int
     int k_tot;             /* total number of sub domains */
 
 
-    int cell_index;     /* cells_index is the flattend index of the cell */
+    int cell_index;     /* cell_index is the flattened index of the cell */
 
                            /* j is merely a counter */
 
@@ -892,7 +892,7 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
 
     int loop_over_y_cells; /* number of mesh point in domain */
 
-    int cell_index,j;     /* cells_index is the flattend index of the cell */
+    int cell_index,j;     /* cell_index is the flattened index of the cell */
 
                            /* j is merely a counter */
 
@@ -1034,7 +1034,7 @@ __global__ void vectorAdd(float * I_d, float * IL_d, float * IR_d, const int N, 
 
     int loop_over_y_cells; /* number of mesh point in domain */
 
-    int cell_index,j;     /* cells_index is the flattend index of the cell */
+    int cell_index,j;     /* cell_index is the flattened index of the cell */
 
                            /* j is merely a counter */
 
