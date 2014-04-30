@@ -28,7 +28,7 @@
 #include <cuda.h>
 
 
-const int N = (int)pow(2,17);    /* num grid point */
+const int N = (int)pow(2,14);    /* num grid point */
 
 const int M = 16;      /* max number grid points in a subdomain */
 
@@ -59,6 +59,35 @@ Inputs: int * debugArray_ptr - a pointer to an array of single digit integers
 
 Outputs: generates a file named debug_output.txt
 */
+
+
+float test_value_constant_integrand(float x, float alpha, float L){
+	
+	float val;
+	
+	val = 2.0-exp(-alpha*x)-exp(-alpha*(L-x));
+	
+	return val;
+}
+
+float test_value_linear_integrand(float x, float alpha, float L){
+	
+	float val;
+	
+	val = 2.0*x+(1.0/alpha)*exp(-alpha*x)-(L+(1.0/alpha))*exp(-alpha*(L-x));
+	
+	return val;
+}
+
+
+float test_value_quadratic_integrand(float x, float alpha, float L){
+	
+	float val;
+	
+	val = (4.0/(alpha*alpha))+2.0*x*x-(2.0/(alpha*alpha))*exp(-alpha*x)-exp(-alpha*(L-x))*((2.0/(alpha*alpha))+(2.0*L/alpha)+L*L);
+	
+	return val;
+}
 
 
 void debug_tool_output_to_file(int * debugArray_ptr, const int N, const int M){
@@ -551,8 +580,8 @@ __global__ void coarseToFineSweep_L(float * IL_d, float * JL_d, const int N, con
                                        /* of sub domain domain tid */
 
 			
-			IL_d[cell_index]= JL_d[cell_index]+ex*push_tracker;
-			push_tracker = push_tracker*ex;
+			IL_d[cell_index]= JL_d[cell_index]+exp(-nu*(float)j)*push_tracker;
+			//push_tracker = push_tracker*ex;
 			
 			//debugArray_d[cell_index] += 1;
         }
@@ -990,8 +1019,8 @@ __global__ void coarseToFineSweep_R(float * IR_d, float * JR_d, const int N, con
                                        /* of sub domain domain tid */
 
 			
-			IR_d[cell_index]= JR_d[cell_index]+ex*push_tracker;
-			push_tracker = push_tracker*ex;
+			IR_d[cell_index]= JR_d[cell_index]+exp(-nu*(float)j)*push_tracker;
+			//push_tracker = push_tracker*ex;
 			
 			debugArray_d[cell_index] += 1;
         }
@@ -1181,9 +1210,16 @@ int main(void){
     //Set Inital Condtion...
 
     for(int i=0;i<N;i++){
+		
+		// Constant integrand
+        //val[i]=(float) 1;
 
-        val[i]=(float) 1;
-
+		// Linear integrand
+		//val[i] = (float)i*dx;
+		
+		// Quadratic integrand
+		val[i] = (float)i*dx*(float)i*dx;
+		
 		I[i]=(float) 0;
 		
 		debugArray[i] = 0;
@@ -1210,7 +1246,7 @@ int main(void){
 	
     //Call kernel
 	for(int n = 0; n<Nt; n++){
-    localWeightAndSweep_L<<<num_B,num_T>>>(JL_d,val_d,N,M,nu,debugArray_d);
+	localWeightAndSweep_L<<<num_B,num_T>>>(JL_d,val_d,N,M,nu,debugArray_d);
 	coarseSweep_L<<<1,1>>>(IL_d,JL_d,N,M,nu,debugArray_d);
 	coarseToFineSweep_L<<<num_B,num_T>>>(IL_d,JL_d,N,M,nu,debugArray_d);
     localWeightAndSweep_R<<<num_B,num_T>>>(JR_d,val_d,N,M,nu,debugArray_d);
@@ -1246,7 +1282,18 @@ int main(void){
 	
 	for(int j=0; j<N; j++){
 		x = (float)j*dx;
-		err_temp = abs(I[j]-(2.0-exp(-alpha*x)-exp(-alpha*(L-x))));
+		
+		// Constant integrand
+		//err_temp = abs(I[j]-test_value_constant_integrand(x, alpha, L));
+		//err_temp = abs(I[j]-(2.0-exp(-alpha*x)-exp(-alpha*(L-x))));
+		//err_temp = abs(I[j]-(1.0-exp(-alpha*x))); //IL only
+		//err_temp = abs(I[j]-(1.0-exp(-alpha*(L-x)))); //IR only
+		
+		// Linear integrand
+		//err_temp = abs(I[j]-test_value_linear_integrand(x, alpha, L));
+		
+		// Quadratic integrand
+		err_temp = abs(I[j]-test_value_quadratic_integrand(x, alpha, L));
 		
 		if (err_temp>1.0e-6)
 			//printf("Error of %f at grid point j = %i \n", err_temp,j);
