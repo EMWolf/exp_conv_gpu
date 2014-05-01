@@ -28,9 +28,7 @@
 #include <cuda.h>
 
 
-const int N = (int)pow(2,14);    /* num grid point */
 
-const int M = 16;      /* max number grid points in a subdomain */
 
 
 
@@ -45,20 +43,7 @@ const int M = 16;      /* max number grid points in a subdomain */
 //
 
 
-/* 
-Function name: debug_tool_output_to_file
 
-Function type: host function
-
-Purpose: Given a pointer to an array of single-digit integers of length N, outputs the array to a text file.
-			The text file is displayed in rows of M entries.
-
-Inputs: int * debugArray_ptr - a pointer to an array of single digit integers
-			const int N - the length of the array
-			const int M - the length of a row in the text file
-
-Outputs: generates a file named debug_output.txt
-*/
 
 
 float test_value_constant_integrand(float x, float alpha, float L){
@@ -89,6 +74,20 @@ float test_value_quadratic_integrand(float x, float alpha, float L){
 	return val;
 }
 
+/* 
+Function name: debug_tool_output_to_file
+
+Function type: host function
+
+Purpose: Given a pointer to an array of single-digit integers of length N, outputs the array to a text file.
+			The text file is displayed in rows of M entries.
+
+Inputs: int * debugArray_ptr - a pointer to an array of single digit integers
+			const int N - the length of the array
+			const int M - the length of a row in the text file
+
+Outputs: generates a file named debug_output.txt
+*/
 
 void debug_tool_output_to_file(int * debugArray_ptr, const int N, const int M){
     int k = N/M;           /* number of whole sub domains */
@@ -1160,7 +1159,25 @@ __global__ void vectorAdd(float * I_d, float * IL_d, float * IR_d, const int N, 
 
 
 
-int main(void){
+int main(int argc, char * argv[]){
+	
+	int Ntemp = (int)pow(2,14);
+	const int M = 16;      /* max number grid points in a subdomain */
+	int Nt = 1; // Number of time steps
+	
+	
+	/* Check inputs */
+	if (argc>1){
+		int base = atoi(argv[1]);
+		int power = atoi(argv[2]);
+		Ntemp = (int)pow(base,power);
+	}
+
+	if (argc>3){
+		Nt = atoi(argv[3]);
+	}
+	
+	const int N = Ntemp;    /* num grid point */
 
 	clock_t start = clock(), setupTime, kernelTime, cleanupTime, testTime, diff;
 	
@@ -1172,7 +1189,7 @@ int main(void){
 	float err = 0.0;
 	float err_temp;
 	
-	int Nt = 1;
+	
 	
     float val[N];
 	float I[N];    //host memory
